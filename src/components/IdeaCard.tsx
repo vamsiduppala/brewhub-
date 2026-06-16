@@ -30,6 +30,7 @@ export type IdeaCardData = {
   tags: string[];
   sources: Source[];
   lastUpdated: string;
+  environment: string;
 };
 
 type IdeaCardProps = {
@@ -181,14 +182,14 @@ export default function IdeaCard({ data, index }: IdeaCardProps) {
 
             {/* Tags */}
             <div className="flex flex-wrap gap-1">
-              {data.tags.slice(0, 3).map((tag) => (
+              {(data.tags || []).slice(0, 3).map((tag) => (
                 <span key={tag} className="text-[10px] font-semibold bg-secondary text-secondary-foreground px-2 py-0.5 rounded-md border border-border/30">
                   #{tag}
                 </span>
               ))}
-              {data.tags.length > 3 && (
+              {(data.tags || []).length > 3 && (
                 <span className="text-[10px] font-semibold text-muted px-1.5 py-0.5">
-                  +{data.tags.length - 3} more
+                  +{(data.tags || []).length - 3} more
                 </span>
               )}
             </div>

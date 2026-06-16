@@ -110,22 +110,24 @@ async function generateIdeas(cat: any, rawThreads: any[], apiKey: string) {
   let promptText = "";
   if (rawThreads && rawThreads.length > 0) {
     promptText =
-      `You are an expert startup ideator. Generate 20 distinct, startable, high-density Idea Cards based on these raw Reddit threads for the category '${cat.name}' (Description: '${cat.description}'). ` +
-      `Each card must conform strictly to the JSON schema. ` +
+      `You are an expert startup ideator. Generate 12 distinct, startable, high-density Idea Cards based on these raw Reddit threads for the category '${cat.name}' (Description: '${cat.description}'). ` +
+      `Each card must conform strictly to the JSON schema. Keep all text fields (whatItIs, whyNow, momentumWhy, theTea, whoIsDoingIt) very concise (exactly 1-2 sentences each). Do not write long essays or bloated paragraphs. This is crucial so that all 12 ideas can fit in a single response without hitting the output token limit. ` +
       `Analyze the threads to extract real pain points, frustrations, and unmet needs. Do not frame ideas as complaints; focus on actionable business/product solutions. ` +
+      `Explicitly identify the target user environment (e.g., "Chrome Extension", "VS Code IDE Plugin", "CLI Terminal", "Shopify App Dashboard", "Next.js Server / Vercel Cloud", "Excel / Google Sheets Template", "Mobile iOS/Android App", "B2B SaaS Web App") where users typically operate or encounter this issue. ` +
       `Capture 'the tea' (the background stories, debates, or context behind the problem) in a fun, engaging, and encouraging tone.\n\n` +
       `Input Threads:\n${JSON.stringify(rawThreads)}`;
   } else {
     promptText =
       `You are an expert startup ideator. We were unable to fetch raw threads due to API/rate limits, so you must use your knowledge of the domain and community discussions. ` +
-      `Generate 20 distinct, startable, high-density Idea Cards for the category '${cat.name}' (Description: '${cat.description}'). ` +
-      `Each card must conform strictly to the JSON schema. ` +
+      `Generate 12 distinct, startable, high-density Idea Cards for the category '${cat.name}' (Description: '${cat.description}'). ` +
+      `Each card must conform strictly to the JSON schema. Keep all text fields (whatItIs, whyNow, momentumWhy, theTea, whoIsDoingIt) very concise (exactly 1-2 sentences each). Do not write long essays or bloated paragraphs. This is crucial so that all 12 ideas can fit in a single response without hitting the output token limit. ` +
       `Brainstorm high-momentum, premium startup ideas that solve real pain points commonly discussed in subreddits like r/${cat.subreddits.join(", r/")}. ` +
+      `Explicitly identify the target user environment (e.g., "Chrome Extension", "VS Code IDE Plugin", "CLI Terminal", "Shopify App Dashboard", "Next.js Server / Vercel Cloud", "Excel / Google Sheets Template", "Mobile iOS/Android App", "B2B SaaS Web App") where users typically operate or encounter this issue. ` +
       `Generate realistic 'sources' (with realistic subreddit names, thread titles, upvotes, and comments) that reflect real-world discussions in these communities. ` +
       `Capture 'the tea' (the background stories, debates, or context behind the problem) in a fun, engaging, and encouraging tone.`;
   }
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`;
   
   const response = await fetch(url, {
     method: "POST",
@@ -134,6 +136,7 @@ async function generateIdeas(cat: any, rawThreads: any[], apiKey: string) {
       contents: [{ parts: [{ text: promptText }] }],
       generationConfig: {
         responseMimeType: "application/json",
+        maxOutputTokens: 8192,
         responseSchema: {
           type: "object",
           properties: {
@@ -156,6 +159,7 @@ async function generateIdeas(cat: any, rawThreads: any[], apiKey: string) {
                   whoIsDoingIt: { type: "string" },
                   gettingStarted: { type: "array", items: { type: "string" } },
                   tags: { type: "array", items: { type: "string" } },
+                  environment: { type: "string" },
                   sources: {
                     type: "array",
                     items: {

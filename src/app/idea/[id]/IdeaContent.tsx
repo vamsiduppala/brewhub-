@@ -16,6 +16,7 @@ import {
   Compass,
   ArrowUpRight,
   ExternalLink,
+  Monitor,
 } from "lucide-react";
 import { IdeaCardData } from "@/components/IdeaCard";
 import categories from "@/data/categories.json";
@@ -223,7 +224,7 @@ export default function IdeaContent({ idea }: IdeaContentProps) {
             </h2>
             
             <div className="flex flex-col gap-3">
-              {idea.gettingStarted.map((step, idx) => {
+              {(idea.gettingStarted || []).map((step, idx) => {
                 const checked = checkedSteps.includes(idx);
                 return (
                   <button
@@ -261,11 +262,24 @@ export default function IdeaContent({ idea }: IdeaContentProps) {
             </p>
           </div>
 
+          {/* Card: Target User Environment */}
+          {idea.environment && (
+            <div className="p-5 rounded-2xl border border-border bg-card shadow-sm space-y-3">
+              <h3 className="text-sm font-bold flex items-center gap-1.5 uppercase text-muted tracking-wider">
+                <Monitor className="w-4 h-4 text-primary" />
+                <span>User Environment</span>
+              </h3>
+              <p className="text-xs font-semibold leading-relaxed text-foreground">
+                {idea.environment}
+              </p>
+            </div>
+          )}
+
           {/* Card: Tags */}
           <div className="p-5 rounded-2xl border border-border bg-card shadow-sm space-y-3">
             <h3 className="text-sm font-bold uppercase text-muted tracking-wider">Tags</h3>
             <div className="flex flex-wrap gap-1.5">
-              {idea.tags.map((tag) => (
+              {(idea.tags || []).map((tag) => (
                 <span
                   key={tag}
                   className="text-xs font-bold bg-secondary text-secondary-foreground px-2.5 py-1 rounded-lg border border-border/40"
@@ -284,7 +298,7 @@ export default function IdeaContent({ idea }: IdeaContentProps) {
             </h3>
 
             <div className="flex flex-col gap-4">
-              {idea.sources.map((src, idx) => (
+              {(idea.sources || []).map((src, idx) => (
                 <a
                   key={idx}
                   href={src.url}

@@ -9,13 +9,11 @@ function loadEnv() {
     content.split(/\r?\n/).forEach(line => {
       const match = line.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/);
       if (match) {
-        const key = match[1];
         let value = match[2] || "";
-        // Remove quotes if present
         if (value.length > 0 && value.charAt(0) === '"' && value.charAt(value.length - 1) === '"') {
           value = value.substring(1, value.length - 1);
         }
-        process.env[key] = value;
+        process.env[key = match[1]] = value;
       }
     });
   }
@@ -25,12 +23,35 @@ loadEnv();
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 if (!GEMINI_API_KEY) {
-  console.error("[Crawler Error] GEMINI_API_KEY is not defined in .env file.");
+  console.error("[Populator Error] GEMINI_API_KEY is not defined in .env file.");
   process.exit(1);
 }
 
 const DB_PATH = path.resolve(__dirname, "../src/data/db.json");
 const CATEGORIES_PATH = path.resolve(__dirname, "../src/data/categories.json");
+
+const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Helper fetch wrapper with timeout
+async function fetchWithTimeout(resource, options = {}) {
+  const { timeout = 30000 } = options;
+  
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  
+  try {
+    const response = await fetch(resource, {
+      ...options,
+      signal: controller.signal
+    });
+    clearTimeout(id);
+    return response;
+  } catch (err) {
+    clearTimeout(id);
+    throw err;
+  }
+}
 
 // Helper to decode HTML entities in RSS XML
 function decodeHTMLEntities(str) {
@@ -75,10 +96,7 @@ function parseRedditRSS(xmlText) {
   return entries;
 }
 
-const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-// Crawl multiple RSS feeds (hot, top, search) for subreddits in a category
+// Crawl RSS feeds for subreddits in a category
 async function crawlCategoryRSS(cat) {
   const rawThreads = [];
   const seenUrls = new Set();
@@ -99,17 +117,17 @@ async function crawlCategoryRSS(cat) {
     const feedUrl = feeds[i];
     try {
       if (i > 0) {
-        // Wait 1.5 seconds between requests to avoid rate limits
-        await sleep(1500);
+        await sleep(1500); // 1.5s delay to avoid Reddit rate limit
       }
       
-      const response = await fetch(feedUrl, {
-        headers: { "User-Agent": USER_AGENT }
+      const response = await fetchWithTimeout(feedUrl, {
+        headers: { "User-Agent": USER_AGENT },
+        timeout: 8000 // 8s timeout for RSS feeds
       });
       
       if (response.ok) {
         const xmlText = await response.text();
-        const parsed = parseRedditRSS(xmlText).slice(0, 20); // Capture up to 20 per feed for wider focus
+        const parsed = parseRedditRSS(xmlText).slice(0, 15);
         for (const t of parsed) {
           if (!seenUrls.has(t.url)) {
             seenUrls.add(t.url);
@@ -122,23 +140,21 @@ async function crawlCategoryRSS(cat) {
             });
           }
         }
-      } else {
-        console.warn(`  [Warning] Failed to fetch feed (${response.status} ${response.statusText}): ${feedUrl}`);
       }
     } catch (err) {
-      console.error(`  [Error] Failed to crawl RSS feed ${feedUrl}:`, err.message || err);
+      // ignore silently
     }
   }
   return rawThreads;
 }
 
-// Generate up to 20 ideas using Gemini API (with direct brainstorming fallback if rawThreads is empty)
+// Generate ideas using Gemini API
 async function generateIdeas(cat, rawThreads) {
   let promptText = "";
   if (rawThreads && rawThreads.length > 0) {
     promptText =
-      `You are an expert startup ideator. Generate 12 distinct, startable, high-density Idea Cards based on these raw Reddit threads for the category '${cat.name}' (Description: '${cat.description}'). ` +
-      `Each card must conform strictly to the JSON schema. Keep all text fields (whatItIs, whyNow, momentumWhy, theTea, whoIsDoingIt) very concise (exactly 1-2 sentences each). Do not write long essays or bloated paragraphs. This is crucial so that all 12 ideas can fit in a single response without hitting the output token limit. ` +
+      `You are an expert startup ideator. Generate 10 distinct, startable, high-density Idea Cards based on these raw Reddit threads for the category '${cat.name}' (Description: '${cat.description}'). ` +
+      `Each card must conform strictly to the JSON schema. Keep all text fields (whatItIs, whyNow, momentumWhy, theTea, whoIsDoingIt) very concise (exactly 1-2 sentences each). Do not write long essays or bloated paragraphs. This is crucial so that all 10 ideas can fit in a single response without hitting the output token limit. ` +
       `Analyze the threads to extract real pain points, frustrations, and unmet needs. Do not frame ideas as complaints; focus on actionable business/product solutions. ` +
       `Explicitly identify the target user environment (e.g., "Chrome Extension", "VS Code IDE Plugin", "CLI Terminal", "Shopify App Dashboard", "Next.js Server / Vercel Cloud", "Excel / Google Sheets Template", "Mobile iOS/Android App", "B2B SaaS Web App") where users typically operate or encounter this issue. ` +
       `Capture 'the tea' (the background stories, debates, or context behind the problem) in a fun, engaging, and encouraging tone.\n\n` +
@@ -146,8 +162,8 @@ async function generateIdeas(cat, rawThreads) {
   } else {
     promptText =
       `You are an expert startup ideator. We were unable to fetch raw threads due to API/rate limits, so you must use your knowledge of the domain and community discussions. ` +
-      `Generate 12 distinct, startable, high-density Idea Cards for the category '${cat.name}' (Description: '${cat.description}'). ` +
-      `Each card must conform strictly to the JSON schema. Keep all text fields (whatItIs, whyNow, momentumWhy, theTea, whoIsDoingIt) very concise (exactly 1-2 sentences each). Do not write long essays or bloated paragraphs. This is crucial so that all 12 ideas can fit in a single response without hitting the output token limit. ` +
+      `Generate 10 distinct, startable, high-density Idea Cards for the category '${cat.name}' (Description: '${cat.description}'). ` +
+      `Each card must conform strictly to the JSON schema. Keep all text fields (whatItIs, whyNow, momentumWhy, theTea, whoIsDoingIt) very concise (exactly 1-2 sentences each). Do not write long essays or bloated paragraphs. This is crucial so that all 10 ideas can fit in a single response without hitting the output token limit. ` +
       `Brainstorm high-momentum, premium startup ideas that solve real pain points commonly discussed in subreddits like r/${cat.subreddits.join(", r/")}. ` +
       `Explicitly identify the target user environment (e.g., "Chrome Extension", "VS Code IDE Plugin", "CLI Terminal", "Shopify App Dashboard", "Next.js Server / Vercel Cloud", "Excel / Google Sheets Template", "Mobile iOS/Android App", "B2B SaaS Web App") where users typically operate or encounter this issue. ` +
       `Generate realistic 'sources' (with realistic subreddit names, thread titles, upvotes, and comments) that reflect real-world discussions in these communities. ` +
@@ -156,9 +172,10 @@ async function generateIdeas(cat, rawThreads) {
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${GEMINI_API_KEY}`;
   
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    timeout: 45000, // 45s timeout for Gemini API calls
     body: JSON.stringify({
       contents: [{ parts: [{ text: promptText }] }],
       generationConfig: {
@@ -223,147 +240,115 @@ async function generateIdeas(cat, rawThreads) {
   return null;
 }
 
-// Update db.json (Accumulate, Deduplicate, and Cap at 100)
-function updateDatabase(categorySlug, newIdeas) {
+async function run() {
+  console.log("[Populator] Starting incremental bulk database seed script with timeout protection...");
+  
+  if (!fs.existsSync(CATEGORIES_PATH)) {
+    console.error("[Populator Error] Categories config not found.");
+    process.exit(1);
+  }
+  
+  const categories = JSON.parse(fs.readFileSync(CATEGORIES_PATH, "utf8"));
+  
+  // Load existing database
   let dbData = [];
   if (fs.existsSync(DB_PATH)) {
     try {
       dbData = JSON.parse(fs.readFileSync(DB_PATH, "utf8"));
     } catch (e) {
-      console.warn("[Warning] db.json was malformed. Re-initializing.");
+      console.warn("[Populator Warning] db.json was malformed or empty.");
       dbData = [];
     }
   }
-
   if (!Array.isArray(dbData)) {
     dbData = [];
   }
 
-  const seenTitles = new Set();
-  const merged = [];
-
-  // Normalize new ideas and add timestamps
-  const processedNew = newIdeas.map((idea, idx) => {
-    const title = (idea.title || "Unnamed Idea").trim();
-    const id = idea.id && !idea.id.startsWith("placeholder")
-      ? idea.id
-      : `${categorySlug}-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now() + idx}`;
-    return {
-      ...idea,
-      id,
-      category: categorySlug,
-      title,
-      lastUpdated: new Date().toISOString()
-    };
-  });
-
-  // Prioritize new ideas first so they take precedence over old duplicates
-  for (const idea of [...processedNew, ...dbData]) {
-    if (idea.category !== categorySlug) {
-      merged.push(idea);
-    } else {
-      const cleanTitle = (idea.title || "").toLowerCase().trim();
-      if (cleanTitle && !seenTitles.has(cleanTitle)) {
-        seenTitles.add(cleanTitle);
-        merged.push(idea);
-      }
-    }
-  }
-
-  // Filter ideas for this category to cap them
-  const categoryIdeas = merged.filter(idea => idea.category === categorySlug);
-  const otherIdeas = merged.filter(idea => idea.category !== categorySlug);
-
-  // Sort category ideas by momentumScore descending
-  categoryIdeas.sort((a, b) => (b.momentumScore || 0) - (a.momentumScore || 0));
-
-  // Cap at 100 ideas
-  const cappedCategoryIdeas = categoryIdeas.slice(0, 100);
-
-  const updated = [...otherIdeas, ...cappedCategoryIdeas];
-
-  fs.writeFileSync(DB_PATH, JSON.stringify(updated, null, 2), "utf8");
-  console.log(`  [Database] Database updated. Category '${categorySlug}' now holds ${cappedCategoryIdeas.length} cards.`);
-}
-
-// Run crawler for a single category index
-async function runCrawlingCycle(index) {
-  if (!fs.existsSync(CATEGORIES_PATH)) {
-    console.error(`Categories config file not found at ${CATEGORIES_PATH}`);
-    return;
-  }
-  const categories = JSON.parse(fs.readFileSync(CATEGORIES_PATH, "utf8"));
-  
-  if (categories.length === 0) return;
-  const targetIdx = index % categories.length;
-  const cat = categories[targetIdx];
-
-  console.log(`[Crawler] Round-robin polling category (${targetIdx + 1}/${categories.length}): ${cat.name}`);
-  
-  try {
-    const threads = await crawlCategoryRSS(cat);
-    if (threads.length === 0) {
-      console.log(`  No new RSS threads crawled for r/${cat.subreddits.join(", r/")}`);
-      return;
+  for (let i = 0; i < categories.length; i++) {
+    const cat = categories[i];
+    
+    // Count existing ideas for this category
+    const existingCount = dbData.filter(idea => idea.category === cat.slug).length;
+    console.log(`[Populator] Category (${i + 1}/${categories.length}) "${cat.name}" has ${existingCount} existing ideas.`);
+    
+    if (existingCount >= 10) {
+      console.log(`  Skipping category "${cat.name}" since it already has ${existingCount} ideas (at least 10 required).`);
+      continue;
     }
     
-    console.log(`  Fetched ${threads.length} distinct RSS entries. Contacting Gemini...`);
-    const newIdeas = await generateIdeas(cat, threads);
-    if (newIdeas && newIdeas.length > 0) {
-      updateDatabase(cat.slug, newIdeas);
-      console.log(`  Success! Database updated with ${newIdeas.length} fresh ideas for ${cat.name}.`);
-    } else {
-      console.log(`  Gemini returned 0 ideas for ${cat.name}.`);
+    console.log(`  Generating 10 ideas for category "${cat.name}"...`);
+    let threads = [];
+    try {
+      threads = await crawlCategoryRSS(cat);
+      if (threads.length === 0) {
+        console.log(`    No threads crawled. Using Gemini direct brainstorming fallback.`);
+      } else {
+        console.log(`    Successfully crawled ${threads.length} threads.`);
+      }
+    } catch (e) {
+      console.log(`    Failed to crawl RSS. Using Gemini direct brainstorming fallback. Error: ${e.message}`);
     }
-  } catch (err) {
-    console.error(`  [Crawler Error] Failed to refresh category ${cat.name}:`, err.message || err);
+    
+    // Call Gemini API to generate ideas
+    let attempts = 3;
+    let success = false;
+    let ideas = [];
+    
+    while (attempts > 0 && !success) {
+      try {
+        ideas = await generateIdeas(cat, threads);
+        if (ideas && ideas.length > 0) {
+          success = true;
+        } else {
+          attempts--;
+          console.warn(`    [Warning] Received empty ideas, retrying... (${attempts} attempts left)`);
+          await sleep(3000);
+        }
+      } catch (err) {
+        attempts--;
+        console.warn(`    [Warning] Gemini request failed: ${err.message || err}. Retrying... (${attempts} attempts left)`);
+        
+        // If it's a 429 rate limit error, wait longer before retrying
+        if (err.message && err.message.includes("429")) {
+          console.log("    Rate limit hit. Sleeping for 45 seconds before retry...");
+          await sleep(45000);
+        } else {
+          await sleep(5000);
+        }
+      }
+    }
+    
+    if (success) {
+      const processed = ideas.map((idea, idx) => {
+        const title = (idea.title || "Unnamed Idea").trim();
+        const id = `${cat.slug}-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now() + idx}`;
+        return {
+          ...idea,
+          id,
+          category: cat.slug,
+          title,
+          lastUpdated: new Date().toISOString()
+        };
+      });
+      
+      // Append and save immediately so that progress is not lost if the script is terminated!
+      dbData = dbData.filter(idea => idea.category !== cat.slug).concat(processed);
+      fs.writeFileSync(DB_PATH, JSON.stringify(dbData, null, 2), "utf8");
+      console.log(`    [Success] Saved ${processed.length} new ideas for "${cat.name}".`);
+    } else {
+      console.error(`    [Error] Failed to generate ideas for category "${cat.name}" after all retries.`);
+    }
+    
+    // Sleep to prevent Gemini RPM rate limits
+    if (i < categories.length - 1) {
+      console.log("  Waiting 8 seconds before next category...");
+      await sleep(8000);
+    }
   }
-}
-
-// Expose internal trigger for manual category scrapes (used by Next.js API routes)
-async function triggerCategoryRefresh(categorySlug) {
-  if (!fs.existsSync(CATEGORIES_PATH)) {
-    throw new Error("Categories config missing.");
-  }
-  const categories = JSON.parse(fs.readFileSync(CATEGORIES_PATH, "utf8"));
-  const cat = categories.find(c => c.slug === categorySlug);
-  if (!cat) {
-    throw new Error(`Category ${categorySlug} not found.`);
-  }
-
-  console.log(`[On-Demand Scrape] Crawling category RSS: ${cat.name}`);
-  const threads = await crawlCategoryRSS(cat);
-  if (threads.length === 0) {
-    throw new Error(`No posts could be fetched from subreddits: ${cat.subreddits.join(", ")}`);
-  }
-
-  const newIdeas = await generateIdeas(cat, threads);
-  if (newIdeas && newIdeas.length > 0) {
-    updateDatabase(cat.slug, newIdeas);
-    return newIdeas;
-  }
-  throw new Error("Gemini did not return any ideas.");
-}
-
-// Daemon main loop
-let currentIndex = 0;
-async function startDaemon() {
-  console.log("[Crawler Daemon] Starting RSS crawler service...");
   
-  // Run first cycle immediately
-  await runCrawlingCycle(currentIndex++);
-  
-  // Set interval to poll every 60 seconds
-  setInterval(async () => {
-    await runCrawlingCycle(currentIndex++);
-  }, 60000);
+  console.log(`[Populator] Finished incremental run. Total cards in database: ${dbData.length}`);
 }
 
-// If run directly (not required as a module)
-if (require.main === module) {
-  startDaemon();
-}
-
-module.exports = {
-  triggerCategoryRefresh
-};
+run().catch(err => {
+  console.error("[Populator Critical Error]:", err);
+});

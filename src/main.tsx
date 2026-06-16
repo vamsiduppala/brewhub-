@@ -25,6 +25,17 @@ Devvit.addMenuItem({
   }
 });
 
+// Add moderator-only MenuItem to manually trigger the full scheduler crawl job
+Devvit.addMenuItem({
+  location: "subreddit",
+  label: "Brew: Force Run Daily Scrape",
+  forUserType: "moderator",
+  onPress: async (event, context) => {
+    await context.scheduler.runNow({ name: "refresh_ideas" });
+    context.ui.showToast("Triggered daily ideas refresh job! Stream logs using 'npx devvit logs'.");
+  }
+});
+
 // 3. Configure the Custom Post Web View mounting and Redis message bridge
 Devvit.addCustomPostType({
   name: "Brew Ideas Hub",

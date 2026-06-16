@@ -1,0 +1,100 @@
+[
+  {
+    "slug": "freelancer-economy",
+    "name": "Freelancer Economy",
+    "description": "Platforms, tools, and services powering freelancers and the contract workforce.",
+    "icon": "Briefcase",
+    "subreddits": ["freelance", "Upwork", "WorkOnline", "digitalnomad", "Entrepreneur"]
+  },
+  {
+    "slug": "fitness-wellness",
+    "name": "Fitness & Wellness",
+    "description": "Fitness gadgets, coaching software, nutritional planners, and wellbeing apps.",
+    "icon": "Activity",
+    "subreddits": ["Fitness", "loseit", "xxfitness", "bodyweightfitness", "running"]
+  },
+  {
+    "slug": "local-retail",
+    "name": "Local Retail",
+    "description": "Boutiques, local services, physical-to-digital tools, and local shop software.",
+    "icon": "Store",
+    "subreddits": ["smallbusiness", "retail", "Entrepreneur", "ecommerce"]
+  },
+  {
+    "slug": "developer-tools",
+    "name": "Developer Tools",
+    "description": "IDEs, API libraries, devops tools, and developer productivity software.",
+    "icon": "Code",
+    "subreddits": ["webdev", "SaaS", "SideProject", "devops", "programming"]
+  },
+  {
+    "slug": "ecommerce-dtc",
+    "name": "E-commerce & DTC",
+    "description": "Shopify apps, dropshipping tools, multi-channel software, and physical products.",
+    "icon": "ShoppingBag",
+    "subreddits": ["ecommerce", "shopify", "AmazonSeller", "dropship"]
+  },
+  {
+    "slug": "creator-economy",
+    "name": "Creator Economy",
+    "description": "Tools for YouTubers, podcasters, newsletters, and community builders.",
+    "icon": "Video",
+    "subreddits": ["NewTubers", "podcasting", "Twitch", "Substack", "CreatorEconomy"]
+  },
+  {
+    "slug": "ai-automation",
+    "name": "AI & Automation",
+    "description": "SaaS leveraging AI models, local LLMs, and workflow integrations.",
+    "icon": "Cpu",
+    "subreddits": ["artificial", "automation", "SaaS", "LocalLLaMA", "OpenAI"]
+  },
+  {
+    "slug": "fintech-finance",
+    "name": "FinTech & Personal Finance",
+    "description": "Personal finance planners, investment tracking, budgeting tools, and neo-banking.",
+    "icon": "DollarSign",
+    "subreddits": ["personalfinance", "Fintech", "financialindependence", "Bogleheads"]
+  },
+  {
+    "slug": "food-beverage",
+    "name": "Food & Beverage",
+    "description": "B2B restaurant software, coffee tech, food truck trackers, and specialty products.",
+    "icon": "Coffee",
+    "subreddits": ["foodtruck", "restaurateur", "Coffee", "smallbusiness"]
+  },
+  {
+    "slug": "edtech-learning",
+    "name": "EdTech & Online Learning",
+    "description": "Interactive learning hubs, coding platforms, and language acquisition tools.",
+    "icon": "BookOpen",
+    "subreddits": ["edtech", "OnlineEducation", "languagelearning", "learnprogramming"]
+  },
+  {
+    "slug": "realestate-proptech",
+    "name": "Real Estate & PropTech",
+    "description": "Property management systems, investment analyzers, and landlord dashboards.",
+    "icon": "Home",
+    "subreddits": ["realestateinvesting", "Landlord", "RealEstate"]
+  },
+  {
+    "slug": "travel-hospitality",
+    "name": "Travel & Hospitality",
+    "description": "Airbnb host helpers, solo travel platforms, itineraries, and travel gear.",
+    "icon": "Compass",
+    "subreddits": ["travel", "digitalnomad", "AirBnB", "solotravel"]
+  },
+  {
+    "slug": "sustainability-cleantech",
+    "name": "Sustainability & CleanTech",
+    "description": "Carbon calculators, zero-waste products, climate tech SaaS, and energy software.",
+    "icon": "Leaf",
+    "subreddits": ["sustainability", "RenewableEnergy", "ZeroWaste", "climatetech"]
+  },
+  {
+    "slug": "side-hustles-bootstrapping",
+    "name": "Side Hustles & Bootstrapping",
+    "description": "Micro-SaaS projects, sweatystartups, and community-driven side business builds.",
+    "icon": "Sparkles",
+    "subreddits": ["SideProject", "EntrepreneurRideAlong", "juststart", "sweatystartup"]
+  }
+]

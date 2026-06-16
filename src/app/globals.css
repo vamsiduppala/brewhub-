@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-outfit), var(--font-geist-sans), sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
+}
+
+:root {
+  --background: hsl(30, 20%, 97%);
+  --foreground: hsl(24, 30%, 12%);
+  
+  --card: hsl(30, 20%, 100%);
+  --card-foreground: hsl(24, 30%, 12%);
+  
+  --primary: hsl(32, 85%, 45%);
+  --primary-foreground: hsl(30, 20%, 97%);
+  
+  --secondary: hsl(24, 15%, 90%);
+  --secondary-foreground: hsl(24, 30%, 20%);
+  
+  --muted: hsl(24, 10%, 48%);
+  --border: hsl(24, 12%, 86%);
+  
+  --accent: hsl(32, 85%, 94%);
+  --accent-foreground: hsl(32, 85%, 45%);
+  
+  --ring: hsl(32, 85%, 45%);
+}
+
+.dark {
+  --background: hsl(24, 25%, 7%);
+  --foreground: hsl(30, 20%, 90%);
+  
+  --card: hsl(24, 25%, 11%);
+  --card-foreground: hsl(30, 20%, 90%);
+  
+  --primary: hsl(32, 85%, 55%);
+  --primary-foreground: hsl(24, 25%, 7%);
+  
+  --secondary: hsl(24, 15%, 14%);
+  --secondary-foreground: hsl(30, 20%, 88%);
+  
+  --muted: hsl(24, 10%, 45%);
+  --border: hsl(24, 15%, 16%);
+  
+  --accent: hsl(32, 85%, 12%);
+  --accent-foreground: hsl(32, 85%, 55%);
+  
+  --ring: hsl(32, 85%, 55%);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
+
+/* Custom premium scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
